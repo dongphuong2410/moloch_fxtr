@@ -1,0 +1,179 @@
+#!/bin/bash
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+#Clean environment
+/home/meo/test/clean.sh
+rm -rf outfiles/*
+/home/meo/moloch-0.14.2-spsc/capture/moloch-capture -e -r /home/meo/test/files/ftp_pasv.pcap &> log.log
+
+curl -XPOST 'localhost:9200/sessions-*/_flush?pretty' &> /dev/null
+curl -XPOST 'localhost:9200/attach-*/_flush?pretty' &> /dev/null
+
+filename=$(curl -XGET -s 'localhost:9200/attach-151019/_search?pretty' -d '{"_source":"filename"}' | grep "filename" | awk '{ print $3}' | sed -e 's/^"//' -e 's/"$//')
+if [ $filename == "1KB.zip" ]; then
+    echo -e "${GREEN}PASS${NC} 01"
+else
+    echo -e "${RED}FAIL${NC} 01"
+fi
+
+dataip=$(curl -XGET -s 'localhost:9200/attach-151019/_search?pretty' -d '{"_source":"dataip"}' | grep "dataip" | awk '{ print $3}')
+if [ $dataip == 1518487113 ]; then
+    echo -e "${GREEN}PASS${NC} 02"
+else
+    echo -e "${RED}FAIL${NC} 02"
+fi
+
+dataport=$(curl -XGET -s 'localhost:9200/attach-151019/_search?pretty' -d '{"_source":"dataport"}' | grep "dataport" | awk '{ print $3}')
+if [ $dataport == 29209 ]; then
+    echo -e "${GREEN}PASS${NC} 03"
+else
+    echo -e "${RED}FAIL${NC} 03"
+fi
+
+fpd=$(curl -XGET -s 'localhost:9200/attach-151019/_search?pretty' -d '{"_source":"fpd"}' | grep "fpd" | awk '{ print $3}')
+if [ $fpd == 1445236831713 ]; then
+    echo -e "${GREEN}PASS${NC} 04"
+else
+    echo -e "${RED}FAIL${NC} 04"
+fi
+
+lpd=$(curl -XGET -s 'localhost:9200/attach-151019/_search?pretty' -d '{"_source":"lpd"}' | grep "lpd" | awk '{ print $3}')
+if [ $lpd == 1445236834992 ]; then
+    echo -e "${GREEN}PASS${NC} 05"
+else
+    echo -e "${RED}FAIL${NC} 05"
+fi
+
+rm -rf outfiles/*
+id=$(curl -XGET -s 'localhost:9200/attach-151019/_search?pretty'  | grep "_id" | awk '{ print $3}' | tail -c+2 | head -c-3)
+
+./fxtr ftp.out -a $id -d ./outfiles &> log.log
+chk_file=$(ls -al outfiles | grep 1024 | wc -l)
+if [ $chk_file == 1 ]; then
+    echo -e "${GREEN}PASS${NC} 06"
+else
+    echo -e "${RED}FAIL${NC} 06"
+fi
+
+rm -rf outfiles/*
+id=$(curl -XGET -s 'localhost:9200/sessions-151019/_search?pretty' -d '{"query" : {"match" : {"tags-term" : "protocol:ftp"}}}' | grep "_id" | awk '{print $3}' | tail -c+2 | head -c-3)
+./fxtr ftp.out -s $id -d ./outfiles &> log.log
+chk_file=$(ls -al outfiles | grep 1024 | wc -l)
+if [ $chk_file == 1 ]; then
+    echo -e "${GREEN}PASS${NC} 07"
+else
+    echo -e "${RED}FAIL${NC} 07"
+fi
+
+
+
+/home/meo/test/clean.sh
+/home/meo/moloch-0.14.2-spsc/capture/moloch-capture -e -r /home/meo/test/files/ftp_epasv.pcap &> log.log
+
+curl -XPOST 'localhost:9200/sessions-*/_flush?pretty' &> /dev/null
+curl -XPOST 'localhost:9200/attach-*/_flush?pretty' &> /dev/null
+filename=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "README" }}, "_source" : "filename"}' \
+        | grep "filename" | awk '{print $3}' | sed -e 's/^"//' -e 's/"$//')
+if [ $filename == "README" ]; then
+    echo -e "${GREEN}PASS${NC} 07"
+else
+    echo -e "${RED}FAIL${NC} 07"
+fi
+
+dataip=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "README" }}, "_source" : "dataip"}' \
+        | grep "dataip" | awk '{print $3}')
+if [ $dataip ==  0 ]; then
+    echo -e "${GREEN}PASS${NC} 08"
+else
+    echo -e "${RED}FAIL${NC} 08"
+fi
+
+dataport=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "README" }}, "_source" : "dataport"}' \
+        | grep "dataport" | awk '{print $3}')
+if [ $dataport ==  36986 ]; then
+    echo -e "${GREEN}PASS${NC} 09"
+else
+    echo -e "${RED}FAIL${NC} 09"
+fi
+
+fpd=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "README" }}, "_source" : "fpd"}' \
+        | grep "fpd" | awk '{print $3}')
+if [ $fpd ==  1187379087247 ]; then
+    echo -e "${GREEN}PASS${NC} 10"
+else
+    echo -e "${RED}FAIL${NC} 10"
+fi
+
+lpd=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "README" }}, "_source" : "lpd"}' \
+        | grep "lpd" | awk '{print $3}')
+if [ $lpd ==  1187379117579 ]; then
+    echo -e "${GREEN}PASS${NC} 11"
+else
+    echo -e "${RED}FAIL${NC} 11"
+fi
+
+/home/meo/test/clean.sh
+/home/meo/moloch-0.14.2-spsc/capture/moloch-capture -e -r /home/meo/test/files/ftp_large.pcap &> log.log
+
+curl -XPOST 'localhost:9200/sessions-*/_flush?pretty' &> /dev/null
+curl -XPOST 'localhost:9200/attach-*/_flush?pretty' &> /dev/null
+filename=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "NOTICE" }}, "_source" : "filename"}' \
+        | grep "filename" | awk '{print $3}' | sed -e 's/^"//' -e 's/"$//')
+if [ $filename == "NOTICE" ]; then
+    echo -e "${GREEN}PASS${NC} 12"
+else
+    echo -e "${RED}FAIL${NC} 12"
+fi
+
+dataip=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "NOTICE" }}, "_source" : "dataip"}' \
+        | grep "dataip" | awk '{print $3}' | sed -e 's/^"//' -e 's/"$//')
+if [ $dataip == 3232238131 ]; then
+    echo -e "${GREEN}PASS${NC} 13"
+else
+    echo -e "${RED}FAIL${NC} 13"
+fi
+
+dataport=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "NOTICE" }}, "_source" : "dataport"}' \
+        | grep "dataport" | awk '{print $3}' | sed -e 's/^"//' -e 's/"$//')
+if [ $dataport == 7614 ]; then
+    echo -e "${GREEN}PASS${NC} 14"
+else
+    echo -e "${RED}FAIL${NC} 14"
+fi
+
+fpd=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "NOTICE" }}, "_source" : "fpd"}' \
+        | grep "fpd" | awk '{print $3}' | sed -e 's/^"//' -e 's/"$//')
+if [ $fpd == 1480464725446 ]; then
+    echo -e "${GREEN}PASS${NC} 15"
+else
+    echo -e "${RED}FAIL${NC} 15"
+fi
+
+lpd=$(curl -XGET -s 'localhost:9200/attach-*/_search?pretty' -d '{"query" : { "match" : {"filename" : "NOTICE" }}, "_source" : "lpd"}' \
+        | grep "lpd" | awk '{print $3}' | sed -e 's/^"//' -e 's/"$//')
+if [ $lpd == 1480464758136 ]; then
+    echo -e "${GREEN}PASS${NC} 16"
+else
+    echo -e "${RED}FAIL${NC} 16"
+fi
+
+#./fxtr ftp.out $dataip $dataport $fpd $lpd &> log.log
+#chk_file=$(ls -al ftp.out | grep 29377 | wc -l)
+#if [ $chk_file == 1 ]; then
+#    echo -e "${GREEN}PASS${NC} 17"
+#else
+#    echo -e "${RED}FAIL${NC} 17"
+#fi
+#
+#text=$(cat ftp.out | head -c20)
+#if [ $text == "capture/thirdparty/h" ]; then
+#    echo -e "${GREEN}PASS${NC} 18"
+#else
+#    echo -e "${RED}FAIL${NC} 18"
+#fi
+    
+rm -rf log.log
+rm -rf ftp.out
